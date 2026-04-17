@@ -1,0 +1,96 @@
+<idea-plugin require-restart="false">
+    <id>com.brighterly.testlinks</id>
+    <name>Tests Links</name>
+    <vendor>Brighterly</vendor>
+    <description><![CDATA[
+        <p>
+            Links PHP <b>Service</b> and <b>Controller</b> classes to their PHPUnit tests,
+            scaffolds new test files on demand, and shows project-wide coverage in the status bar.
+        </p>
+
+        <h3>Gutter icon</h3>
+        <ul>
+            <li><b>Green</b> — at least one test file with ≥ 1 test method.</li>
+            <li><b>Yellow</b> — test file exists but no test methods detected.</li>
+            <li><b>Grey +</b> — no test file. Click to scaffold one.</li>
+            <li>Tooltip shows the test method count, counting <code>function test*</code>, <code>#[Test]</code> attributes, and <code>@test</code> docblock tags.</li>
+        </ul>
+
+        <h3>Click actions</h3>
+        <ul>
+            <li><b>Open test</b> — single test file opens directly.</li>
+            <li><b>Picker popup</b> — multiple test files (e.g. both <code>tests/Services/...</code> and <code>tests/Feature/Services/...</code>) show in a list.</li>
+            <li><b>Create test</b> — grey <b>+</b> scaffolds <code>{ClassName}Test.php</code> at the mirrored path. Stub follows project conventions: <code>declare(strict_types=1)</code>, <code>extends TestCase</code>, <code>DatabaseTransactions</code> trait, AAA placeholder method.</li>
+        </ul>
+
+        <h3>Reverse navigation</h3>
+        <ul>
+            <li>Gutter icon on a test class jumps to the subject Service/Controller (uses PhpIndex).</li>
+        </ul>
+
+        <h3>Status bar widget</h3>
+        <ul>
+            <li>Shows <code>Tests 48% (72/150)</code> for Service + Controller coverage.</li>
+            <li>Click for a breakdown, a rebuild action, and the first 30 uncovered class names.</li>
+        </ul>
+
+        <h3>Performance</h3>
+        <ul>
+            <li>Async index build at project open — typically 10–50 ms for 150 test files.</li>
+            <li>Gutter rendering is a <code>ConcurrentHashMap</code> lookup with no disk I/O.</li>
+            <li>VFS listener incrementally refreshes individual test and source files on save.</li>
+        </ul>
+
+        <h3>Scope</h3>
+        <ul>
+            <li>Classes under <code>app/Services/**</code> and <code>app/Http/Controllers/**</code>.</li>
+            <li>Test files named <code>{ClassName}Test.php</code> anywhere inside <code>{projectRoot}/tests/</code>.</li>
+        </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.jetbrains.php</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+
+        <!-- Project-level services -->
+        <projectService
+            serviceImplementation="com.brighterly.testlinks.service.TestIndexService"/>
+        <projectService
+            serviceImplementation="com.brighterly.testlinks.service.SourceIndexService"/>
+
+        <!-- Rebuilds indexes on project open -->
+        <postStartupActivity
+            implementation="com.brighterly.testlinks.listener.TestIndexStartupActivity"/>
+
+        <!-- Line marker: gutter icon near Service/Controller class declarations -->
+        <codeInsight.lineMarkerProvider
+            language="PHP"
+            implementationClass="com.brighterly.testlinks.provider.TestFileLineMarkerProvider"/>
+
+        <!-- Line marker: reverse navigation from test class to subject -->
+        <codeInsight.lineMarkerProvider
+            language="PHP"
+            implementationClass="com.brighterly.testlinks.provider.ReverseTestLineMarkerProvider"/>
+
+        <!-- Status bar widget: project-wide coverage % -->
+        <statusBarWidgetFactory
+            implementation="com.brighterly.testlinks.statusbar.CoverageStatusBarWidgetFactory"
+            id="brighterly.testlinks.status"
+            order="after Position"/>
+
+        <!-- Notification group for file-creation results -->
+        <notificationGroup
+            id="Tests Links"
+            displayType="BALLOON"/>
+
+    </extensions>
+
+    <applicationListeners>
+        <!-- VFS listener: refresh index when test files or phpunit.xml change -->
+        <listener
+            class="com.brighterly.testlinks.listener.TestFileVfsListener"
+            topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+    </applicationListeners>
+
+</idea-plugin>

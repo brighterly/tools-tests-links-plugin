@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{NAMESPACE}};
+
+use {{SOURCE_FQN}};
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
+
+class {{TEST_CLASS}} extends TestCase
+{
+    use DatabaseTransactions;
+
+    private {{SOURCE_CLASS}} $service;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->service = $this->app->make({{SOURCE_CLASS}}::class);
+    }
+
+    public function testExample(): void
+    {
+        // Arrange
+
+        // Act
+
+        // Assert
+        $this->assertNotNull($this->service);
+    }
+}
