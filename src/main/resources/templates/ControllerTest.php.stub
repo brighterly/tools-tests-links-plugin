@@ -11,10 +11,6 @@ use Tests\TestCase;
 
 /**
  * HTTP tests for {{SOURCE_CLASS}}.
- *
- * These tests exercise the controller through the routing layer — they call
- * `$this->getJson()` / `$this->postJson()` etc. rather than invoking methods
- * directly, so routing, middleware, form requests, and resources are all covered.
  */
 class {{TEST_CLASS}} extends TestCase
 {
@@ -28,7 +24,7 @@ class {{TEST_CLASS}} extends TestCase
         // $this->actingAs(User::factory()->create());
     }
 
-    public function testIndex(): void
+    public function exampleTest(): void
     {
         // Arrange
         // TODO: seed any data the endpoint needs to return.
@@ -38,29 +34,5 @@ class {{TEST_CLASS}} extends TestCase
 
         // Assert
         $response->assertOk();
-    }
-
-    public function testValidation(): void
-    {
-        // Arrange
-        $invalidPayload = [];
-
-        // Act
-        $response = $this->postJson($this->endpoint(), $invalidPayload);
-
-        // Assert
-        $response->assertUnprocessable();
-    }
-
-    private function sendRequest(): TestResponse
-    {
-        // TODO: swap to postJson/putJson/deleteJson with a payload when needed.
-        return $this->getJson($this->endpoint());
-    }
-
-    private function endpoint(): string
-    {
-        // TODO: replace with the real route path for {{SOURCE_CLASS}}.
-        return '/api/todo-endpoint';
     }
 }

@@ -9,6 +9,7 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupStep
 import com.intellij.openapi.ui.popup.util.BaseListPopupStep
+import com.intellij.openapi.application.ReadAction
 import com.intellij.psi.PsiElement
 import com.intellij.ui.awt.RelativePoint
 import com.jetbrains.php.PhpIndex
@@ -74,7 +75,8 @@ class ReverseTestLineMarkerProvider : LineMarkerProvider {
 
     private fun navigate(phpClass: PhpClass) {
         val file = phpClass.containingFile?.virtualFile ?: return
-        OpenFileDescriptor(phpClass.project, file, phpClass.textOffset).navigate(true)
+        val offset = ReadAction.compute<Int, Throwable> { phpClass.textOffset }
+        OpenFileDescriptor(phpClass.project, file, offset).navigate(true)
     }
 
     private fun showPicker(
@@ -83,12 +85,13 @@ class ReverseTestLineMarkerProvider : LineMarkerProvider {
         mouseEvent: java.awt.event.MouseEvent,
     ) {
         val step = object : BaseListPopupStep<PhpClass>("Go to Subject Class", candidates) {
-            override fun getTextFor(value: PhpClass): String {
-                val rel = project.basePath
-                    ?.let { base -> value.containingFile?.virtualFile?.path?.removePrefix("$base/") }
-                    ?: value.fqn
-                return rel ?: value.fqn
-            }
+            override fun getTextFor(value: PhpClass): String =
+                ReadAction.compute<String, Throwable> {
+                    val rel = project.basePath
+                        ?.let { base -> value.containingFile?.virtualFile?.path?.removePrefix("$base/") }
+                        ?: value.fqn
+                    rel ?: value.fqn
+                }
 
             override fun onChosen(selectedValue: PhpClass, finalChoice: Boolean): PopupStep<*>? {
                 navigate(selectedValue)

@@ -53,11 +53,25 @@
 
     <extensions defaultExtensionNs="com.intellij">
 
+        <!-- Application-level settings -->
+        <applicationService
+            serviceImplementation="com.brighterly.testlinks.settings.TestsLinksSettings"/>
+
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.brighterly.testlinks.settings.TestsLinksConfigurable"
+            id="com.brighterly.testlinks.settings"
+            displayName="Tests Links"/>
+
         <!-- Project-level services -->
         <projectService
             serviceImplementation="com.brighterly.testlinks.service.TestIndexService"/>
         <projectService
             serviceImplementation="com.brighterly.testlinks.service.SourceIndexService"/>
+        <projectService
+            serviceImplementation="com.brighterly.testlinks.routes.RouteIndexService"/>
+        <projectService
+            serviceImplementation="com.brighterly.testlinks.coverage.CloverCoverageService"/>
 
         <!-- Rebuilds indexes on project open -->
         <postStartupActivity
@@ -72,6 +86,18 @@
         <codeInsight.lineMarkerProvider
             language="PHP"
             implementationClass="com.brighterly.testlinks.provider.ReverseTestLineMarkerProvider"/>
+
+        <!-- Line marker: per-method coverage next to public Service/Controller methods -->
+        <codeInsight.lineMarkerProvider
+            language="PHP"
+            implementationClass="com.brighterly.testlinks.provider.MethodTestLineMarkerProvider"/>
+
+        <!-- Alt+Enter intention to create test file -->
+        <intentionAction>
+            <language>PHP</language>
+            <className>com.brighterly.testlinks.intention.CreateTestIntention</className>
+            <category>Tests Links</category>
+        </intentionAction>
 
         <!-- Status bar widget: project-wide coverage % -->
         <statusBarWidgetFactory
@@ -92,5 +118,22 @@
             class="com.brighterly.testlinks.listener.TestFileVfsListener"
             topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
     </applicationListeners>
+
+    <actions>
+        <action
+            id="brighterly.testlinks.FindUntested"
+            class="com.brighterly.testlinks.action.FindUntestedClassesAction"
+            text="Find Untested Services &amp; Controllers"
+            description="List all Services and Controllers without a corresponding test file">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action
+            id="brighterly.testlinks.GoToTest"
+            class="com.brighterly.testlinks.action.GoToTestAction"
+            text="Go to Test (Tests Links)"
+            description="Open the test file for the class under caret, or scaffold one if missing">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift T"/>
+        </action>
+    </actions>
 
 </idea-plugin>

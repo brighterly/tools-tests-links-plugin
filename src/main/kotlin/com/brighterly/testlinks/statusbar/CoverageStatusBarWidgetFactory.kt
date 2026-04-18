@@ -1,5 +1,6 @@
 package com.brighterly.testlinks.statusbar
 
+import com.brighterly.testlinks.coverage.CloverCoverageService
 import com.brighterly.testlinks.service.SourceIndexService
 import com.brighterly.testlinks.service.TestIndexService
 import com.intellij.openapi.project.Project
@@ -44,12 +45,14 @@ class CoverageStatusBarWidget(private val project: Project) :
     override fun getText(): String {
         val sources = SourceIndexService.getInstance(project)
         val tests = TestIndexService.getInstance(project)
+        val clover = CloverCoverageService.getInstance(project)
         val sourceNames = sources.allClassNames()
         val total = sourceNames.size
         if (total == 0) return "Tests ⚠"
         val covered = sourceNames.count { tests.findTestsFor(it).isNotEmpty() }
         val pct = (covered * 100) / total
-        return "Tests $pct% ($covered/$total)"
+        val cloverSuffix = if (clover.isLoaded()) " · clover ✓" else ""
+        return "Tests $pct% ($covered/$total)$cloverSuffix"
     }
 
     override fun getTooltipText(): String =

@@ -3,6 +3,7 @@ package com.brighterly.testlinks.scaffold
 import com.brighterly.testlinks.service.TestIndexService
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -24,7 +25,9 @@ object CreateTestFileAction {
 
     fun run(project: Project, phpClass: PhpClass) {
         val basePath = project.basePath ?: return
-        val plan = TestFileScaffolder.planFor(phpClass, basePath) ?: run {
+        val plan = ReadAction.compute<TestFileScaffolder.Plan?, Throwable> {
+            TestFileScaffolder.planFor(phpClass, basePath)
+        } ?: run {
             notify(
                 project,
                 "Cannot create test: class is not under app/Services or app/Http/Controllers.",

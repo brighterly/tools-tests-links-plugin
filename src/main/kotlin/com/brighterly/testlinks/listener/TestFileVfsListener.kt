@@ -1,5 +1,7 @@
 package com.brighterly.testlinks.listener
 
+import com.brighterly.testlinks.coverage.CloverCoverageService
+import com.brighterly.testlinks.routes.RouteIndexService
 import com.brighterly.testlinks.service.SourceIndexService
 import com.brighterly.testlinks.service.TestIndexService
 import com.intellij.openapi.project.ProjectManager
@@ -32,14 +34,28 @@ class TestFileVfsListener : BulkFileListener {
             if (project.isDisposed) continue
             val testService = TestIndexService.getInstance(project)
             val sourceService = SourceIndexService.getInstance(project)
+            val routeService = RouteIndexService.getInstance(project)
+            val cloverService = CloverCoverageService.getInstance(project)
             var needsFullRebuild = false
             var sourcesChanged = false
+            var routesChanged = false
+            var coverageChanged = false
 
             for (event in events) {
                 val file = event.file ?: continue
 
                 if (isPhpUnitConfig(file)) {
                     needsFullRebuild = true
+                    continue
+                }
+
+                if (isRouteFile(file)) {
+                    routesChanged = true
+                    continue
+                }
+
+                if (isCoverageFile(file)) {
+                    coverageChanged = true
                     continue
                 }
 
@@ -66,6 +82,8 @@ class TestFileVfsListener : BulkFileListener {
             } else if (sourcesChanged) {
                 sourceService.rebuildAsync()
             }
+            if (routesChanged) routeService.rebuildAsync()
+            if (coverageChanged) cloverService.refresh()
         }
     }
 
@@ -80,4 +98,10 @@ class TestFileVfsListener : BulkFileListener {
         val path = file.path
         return path.contains("/app/Services/") || path.contains("/app/Http/Controllers/")
     }
+
+    private fun isRouteFile(file: VirtualFile): Boolean =
+        !file.isDirectory && file.name.endsWith(".php") && file.path.contains("/routes/")
+
+    private fun isCoverageFile(file: VirtualFile): Boolean =
+        !file.isDirectory && file.name == "clover.xml"
 }

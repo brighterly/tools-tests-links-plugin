@@ -1,5 +1,7 @@
 package com.brighterly.testlinks.scaffold
 
+import com.brighterly.testlinks.routes.RouteIndexService
+import com.brighterly.testlinks.settings.TestsLinksSettings
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
 /**
@@ -49,12 +51,14 @@ object TestFileScaffolder {
 
         val testClassName = "${className}Test"
         val relativeTestPath = "${location.dir}/$testClassName.php"
+        val endpoint = if (location.kind == Kind.CONTROLLER) resolveEndpoint(phpClass, className) else ""
         val content = renderFromTemplate(
             kind = location.kind,
             namespace = location.namespace,
             testClassName = testClassName,
             sourceFqn = phpClass.fqn.removePrefix("\\"),
             sourceClassName = className,
+            endpoint = endpoint,
         )
 
         return Plan(relativeTestPath, location.namespace, testClassName, content, location.kind)
@@ -96,6 +100,7 @@ object TestFileScaffolder {
         testClassName: String,
         sourceFqn: String,
         sourceClassName: String,
+        endpoint: String,
     ): String {
         val template = loadTemplate(kind.templateResource)
         return template
@@ -103,6 +108,14 @@ object TestFileScaffolder {
             .replace("{{TEST_CLASS}}", testClassName)
             .replace("{{SOURCE_FQN}}", sourceFqn)
             .replace("{{SOURCE_CLASS}}", sourceClassName)
+            .replace("{{ENDPOINT}}", endpoint.ifBlank { "/api/todo-endpoint" })
+    }
+
+    private fun resolveEndpoint(phpClass: PhpClass, shortName: String): String {
+        if (!TestsLinksSettings.get().state.enableRouteAwareStubs) return ""
+        val project = phpClass.project
+        val routes = RouteIndexService.getInstance(project)
+        return routes.findUriFor(shortName) ?: ""
     }
 
     private fun loadTemplate(resourcePath: String): String {
