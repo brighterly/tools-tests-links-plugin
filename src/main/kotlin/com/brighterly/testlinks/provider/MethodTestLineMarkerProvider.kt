@@ -5,7 +5,6 @@ import com.brighterly.testlinks.service.TestIndexService
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
@@ -77,15 +76,13 @@ class MethodTestLineMarkerProvider : LineMarkerProvider {
     }
 
     private fun navigateToTestMethod(project: Project, file: com.intellij.openapi.vfs.VirtualFile, methodName: String) {
-        val offset = ReadAction.compute<Int, Throwable> {
-            val psiFile = PsiManager.getInstance(project).findFile(file) ?: return@compute 0
-            val testClass = psiFile.children
-                .filterIsInstance<com.jetbrains.php.lang.psi.elements.PhpNamespace>()
-                .flatMap { it.children.filterIsInstance<PhpClass>() }
-                .firstOrNull()
-                ?: psiFile.children.filterIsInstance<PhpClass>().firstOrNull()
-            testClass?.ownMethods?.firstOrNull { it.name == methodName }?.textOffset ?: 0
-        }
+        val psiFile = PsiManager.getInstance(project).findFile(file)
+        val testClass = psiFile?.children
+            ?.filterIsInstance<com.jetbrains.php.lang.psi.elements.PhpNamespace>()
+            ?.flatMap { it.children.filterIsInstance<PhpClass>() }
+            ?.firstOrNull()
+            ?: psiFile?.children?.filterIsInstance<PhpClass>()?.firstOrNull()
+        val offset = testClass?.ownMethods?.firstOrNull { it.name == methodName }?.textOffset ?: 0
         OpenFileDescriptor(project, file, offset).navigate(true)
     }
 

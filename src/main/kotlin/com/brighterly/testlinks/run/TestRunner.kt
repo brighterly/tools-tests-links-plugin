@@ -38,10 +38,13 @@ object TestRunner {
     }
 
     fun run(project: Project, testFile: VirtualFile, mode: Mode) {
-        val testClass = ReadAction.compute<com.jetbrains.php.lang.psi.elements.PhpClass?, Throwable> {
-            val psiFile = PsiManager.getInstance(project).findFile(testFile) ?: return@compute null
+        val testClass = ReadAction.nonBlocking<com.jetbrains.php.lang.psi.elements.PhpClass?> {
+            val psiFile = PsiManager.getInstance(project).findFile(testFile) ?: return@nonBlocking null
             findFirstPhpClass(psiFile)
-        } ?: run {
+        }
+            .expireWith(project)
+            .inSmartMode(project)
+            .executeSynchronously() ?: run {
             logger.warn("No PhpClass found inside ${testFile.name}")
             return
         }
@@ -52,7 +55,7 @@ object TestRunner {
         PsiTreeUtil.findChildOfType(psiFile, com.jetbrains.php.lang.psi.elements.PhpClass::class.java)
 
     fun runFromPsi(project: Project, psiElement: PsiElement, mode: Mode) {
-        val settings = ReadAction.compute<com.intellij.execution.RunnerAndConfigurationSettings?, Throwable> {
+        val settings = ReadAction.nonBlocking<com.intellij.execution.RunnerAndConfigurationSettings?> {
             val dataContext = SimpleDataContext.builder()
                 .add(CommonDataKeys.PROJECT, project)
                 .add(CommonDataKeys.PSI_ELEMENT, psiElement)
@@ -62,7 +65,10 @@ object TestRunner {
                 .add(com.intellij.execution.Location.DATA_KEY, PsiLocation.fromPsiElement(psiElement))
                 .build()
             ConfigurationContext.getFromContext(dataContext, ActionPlaces.UNKNOWN).configuration
-        } ?: run {
+        }
+            .expireWith(project)
+            .inSmartMode(project)
+            .executeSynchronously() ?: run {
             logger.warn("No runnable configuration found for ${psiElement.javaClass.simpleName}")
             return
         }

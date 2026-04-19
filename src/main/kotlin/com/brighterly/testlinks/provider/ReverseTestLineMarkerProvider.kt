@@ -9,7 +9,6 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupStep
 import com.intellij.openapi.ui.popup.util.BaseListPopupStep
-import com.intellij.openapi.application.ReadAction
 import com.intellij.psi.PsiElement
 import com.intellij.ui.awt.RelativePoint
 import com.jetbrains.php.PhpIndex
@@ -75,8 +74,7 @@ class ReverseTestLineMarkerProvider : LineMarkerProvider {
 
     private fun navigate(phpClass: PhpClass) {
         val file = phpClass.containingFile?.virtualFile ?: return
-        val offset = ReadAction.compute<Int, Throwable> { phpClass.textOffset }
-        OpenFileDescriptor(phpClass.project, file, offset).navigate(true)
+        OpenFileDescriptor(phpClass.project, file, phpClass.textOffset).navigate(true)
     }
 
     private fun showPicker(
@@ -84,17 +82,22 @@ class ReverseTestLineMarkerProvider : LineMarkerProvider {
         candidates: List<PhpClass>,
         mouseEvent: java.awt.event.MouseEvent,
     ) {
-        val step = object : BaseListPopupStep<PhpClass>("Go to Subject Class", candidates) {
-            override fun getTextFor(value: PhpClass): String =
-                ReadAction.compute<String, Throwable> {
-                    val rel = project.basePath
-                        ?.let { base -> value.containingFile?.virtualFile?.path?.removePrefix("$base/") }
-                        ?: value.fqn
-                    rel ?: value.fqn
-                }
+        data class CandidateItem(val phpClass: PhpClass, val label: String)
 
-            override fun onChosen(selectedValue: PhpClass, finalChoice: Boolean): PopupStep<*>? {
-                navigate(selectedValue)
+        val items = candidates.map { candidate ->
+            CandidateItem(
+                phpClass = candidate,
+                label = project.basePath
+                    ?.let { base -> candidate.containingFile?.virtualFile?.path?.removePrefix("$base/") }
+                    ?: candidate.fqn,
+            )
+        }
+
+        val step = object : BaseListPopupStep<CandidateItem>("Go to Subject Class", items) {
+            override fun getTextFor(value: CandidateItem): String = value.label
+
+            override fun onChosen(selectedValue: CandidateItem, finalChoice: Boolean): PopupStep<*>? {
+                navigate(selectedValue.phpClass)
                 return FINAL_CHOICE
             }
         }

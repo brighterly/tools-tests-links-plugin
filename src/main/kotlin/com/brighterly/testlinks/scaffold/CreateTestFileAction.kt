@@ -25,9 +25,12 @@ object CreateTestFileAction {
 
     fun run(project: Project, phpClass: PhpClass) {
         val basePath = project.basePath ?: return
-        val plan = ReadAction.compute<TestFileScaffolder.Plan?, Throwable> {
+        val plan = ReadAction.nonBlocking<TestFileScaffolder.Plan?> {
             TestFileScaffolder.planFor(phpClass, basePath)
-        } ?: run {
+        }
+            .expireWith(project)
+            .inSmartMode(project)
+            .executeSynchronously() ?: run {
             notify(
                 project,
                 "Cannot create test: class is not under app/Services or app/Http/Controllers.",

@@ -8,12 +8,16 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupStep
 import com.intellij.openapi.ui.popup.util.BaseListPopupStep
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.wm.CustomStatusBarWidget
 import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
-import com.intellij.util.Consumer
-import java.awt.Component
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.panels.Wrapper
+import java.awt.Cursor
 import java.awt.event.MouseEvent
+import java.awt.event.MouseAdapter
+import javax.swing.JComponent
 
 class CoverageStatusBarWidgetFactory : StatusBarWidgetFactory {
 
@@ -30,19 +34,31 @@ class CoverageStatusBarWidgetFactory : StatusBarWidgetFactory {
 }
 
 class CoverageStatusBarWidget(private val project: Project) :
-    StatusBarWidget,
-    StatusBarWidget.TextPresentation {
+    CustomStatusBarWidget {
+
+    private val label = object : JBLabel() {
+        override fun getText(): String = computeText()
+
+        override fun getToolTipText(event: MouseEvent?): String = computeTooltip()
+    }.apply {
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = computeTooltip()
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(event: MouseEvent) {
+                showPopup(event)
+            }
+        })
+    }
+
+    private val component = Wrapper(label)
 
     override fun ID(): String = CoverageStatusBarWidgetFactory.ID
 
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun getPresentation(): StatusBarWidget.WidgetPresentation = this
-
     override fun install(statusBar: StatusBar) {}
     override fun dispose() {}
-    override fun getAlignment(): Float = Component.CENTER_ALIGNMENT
+    override fun getComponent(): JComponent = component
 
-    override fun getText(): String {
+    private fun computeText(): String {
         val sources = SourceIndexService.getInstance(project)
         val tests = TestIndexService.getInstance(project)
         val clover = CloverCoverageService.getInstance(project)
@@ -55,10 +71,12 @@ class CoverageStatusBarWidget(private val project: Project) :
         return "Tests $pct% ($covered/$total)$cloverSuffix"
     }
 
-    override fun getTooltipText(): String =
+    private fun computeTooltip(): String =
         "Service + Controller test coverage — click for details"
 
-    override fun getClickConsumer(): Consumer<MouseEvent> = Consumer { mouseEvent ->
+    private fun showPopup(mouseEvent: MouseEvent) {
+        label.text = computeText()
+        label.toolTipText = computeTooltip()
         val sources = SourceIndexService.getInstance(project)
         val tests = TestIndexService.getInstance(project)
         val sourceNames = sources.allClassNames().sorted()

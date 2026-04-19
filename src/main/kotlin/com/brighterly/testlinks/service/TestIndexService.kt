@@ -9,7 +9,9 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiManager
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -135,8 +137,11 @@ class TestIndexService(private val project: Project) {
     private fun scheduleEditorRefresh() {
         ApplicationManager.getApplication().invokeLater {
             if (!project.isDisposed) {
-                @Suppress("DEPRECATION")
-                DaemonCodeAnalyzer.getInstance(project).restart()
+                val analyzer = DaemonCodeAnalyzer.getInstance(project)
+                val psiManager = PsiManager.getInstance(project)
+                FileEditorManager.getInstance(project).openFiles
+                    .mapNotNull { psiManager.findFile(it) }
+                    .forEach { analyzer.restart(it, "Tests Links index updated") }
             }
         }
     }
