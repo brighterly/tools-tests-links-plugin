@@ -84,23 +84,29 @@ class CoverageStatusBarWidget(private val project: Project) :
         val uncovered = sourceNames.filter { tests.findTestsFor(it).isEmpty() }
         val totalMethods = tests.totalTestMethodCount()
 
-        data class Item(val label: String, val action: () -> Unit = {})
+        data class Item(
+            val label: String,
+            val action: () -> Unit = {},
+            val selectable: Boolean = true,
+        )
 
         val items = buildList {
-            add(Item("Covered: $covered / ${sourceNames.size}"))
-            add(Item("Uncovered: ${uncovered.size}"))
-            add(Item("Total test methods: $totalMethods"))
-            add(Item("—"))
-            add(Item("↻  Rebuild indexes") {
+            add(Item("Covered: $covered / ${sourceNames.size}", selectable = false))
+            add(Item("Uncovered: ${uncovered.size}", selectable = false))
+            add(Item("Total test methods: $totalMethods", selectable = false))
+            add(Item("—", selectable = false))
+            add(Item(label = "↻  Rebuild indexes", action = {
                 sources.rebuildAsync()
                 tests.rebuildAsync()
-            })
+            }))
             if (uncovered.isNotEmpty()) {
-                add(Item("—"))
-                add(Item("Uncovered classes:"))
-                uncovered.take(30).forEach { name -> add(Item("  · $name")) }
+                add(Item("—", selectable = false))
+                add(Item("Uncovered classes:", selectable = false))
+                uncovered.take(30).forEach { name ->
+                    add(Item(label = "  · $name", action = { sources.openFirstClassFile(name) }))
+                }
                 if (uncovered.size > 30) {
-                    add(Item("  … and ${uncovered.size - 30} more"))
+                    add(Item("  … and ${uncovered.size - 30} more", selectable = false))
                 }
             }
         }
@@ -111,7 +117,7 @@ class CoverageStatusBarWidget(private val project: Project) :
                 if (finalChoice) selectedValue.action()
                 return FINAL_CHOICE
             }
-            override fun isSelectable(value: Item): Boolean = value.label != "—"
+            override fun isSelectable(value: Item): Boolean = value.selectable
         }
 
         JBPopupFactory.getInstance()
